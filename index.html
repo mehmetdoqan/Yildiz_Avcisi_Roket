@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🚀 Yıldız Avcısı</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0a0a2e, #1a1a4e, #0d0d3b);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 16px;
+    }
+    .phone {
+      width: 360px;
+      background: #0d0d2b;
+      border-radius: 36px;
+      border: 8px solid #1a1a5e;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,100,255,0.3), 0 0 80px rgba(0,50,200,0.15);
+    }
+    .scr { width: 100%; display: none; flex-direction: column; }
+    .scr.on { display: flex; }
+
+    /* HARİTA */
+    .map-header {
+      padding: 16px 20px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(180deg,#1a1a5e,#0d0d3b);
+      border-bottom: 2px solid #2a2a7e;
+    }
+    .diff-select {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      justify-content: center;
+      background: #0d0d2b;
+    }
+    .diff-btn {
+      flex: 1;
+      padding: 10px 6px;
+      border: 2px solid #333;
+      border-radius: 14px;
+      background: #1a1a3e;
+      color: #aaa;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .diff-btn.sel { border-color: #4fc3f7; color: #4fc3f7; background: #0d2a3e; box-shadow: 0 0 12px rgba(79,195,247,0.3); }
+    .lvl-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      padding: 10px 14px 20px;
+      overflow-y: auto;
+      max-height: 500px;
+      background: #0d0d2b;
+    }
+    .lc {
+      height: 54px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      background: #1a1a3e;
+      color: #444;
+      cursor: not-allowed;
+      position: relative;
+      border: 2px solid #222;
+    }
+    .lc.open { background: #0d2a4e; border: 2.5px solid #4fc3f7; color: #4fc3f7; cursor: pointer; }
+    .lc.done { background: #0d3e1a; border: 2.5px solid #4CAF50; color: #4CAF50; }
+    .lc.done::after { content: '⭐'; position: absolute; bottom: 1px; font-size: 9px; }
+
+    /* OYUN */
+    .play-header {
+      padding: 10px 14px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(180deg,#1a1a5e,#0d0d3b);
+      border-bottom: 2px solid #2a2a7e;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(5, 54px);
+      grid-template-rows: repeat(5, 54px);
+      gap: 3px;
+      padding: 4px;
+      border-radius: 12px;
+      margin: 4px auto;
+      position: relative;
+      border: 4px solid #1a1a6e;
+      background: #1a1a6e;
+    }
+    .sq {
+      width: 54px;
+      height: 54px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      position: relative;
+    }
+    .sq-space1 { background: #050518; }
+    .sq-space2 { background: #080825; }
+
+    /* Yıldız arka plan noktaları */
+    .sq-space1::before, .sq-space2::before {
+      content: '';
+      position: absolute;
+      width: 2px; height: 2px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 50%;
+      top: 30%; left: 70%;
+    }
+
+    .rocket {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      pointer-events: none;
+      transition: top 0.5s cubic-bezier(0.25,0.1,0.25,1), left 0.5s cubic-bezier(0.25,0.1,0.25,1);
+    }
+    .rocket-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      transition: transform 0.3s ease;
+      transform-origin: center center;
+    }
+    .rocket-inner svg {
+      width: 36px;
+      height: 36px;
+    }
+
+    @keyframes thrustAnim {
+      0%,100%{transform:var(--rocket-rot) scale(1)}
+      50%{transform:var(--rocket-rot) scale(1.15)}
+    }
+    .thrusting .rocket-inner { animation: thrustAnim 0.45s ease-in-out; }
+
+    @keyframes sadShake {
+      0%,100%{transform:translateX(0) rotate(0deg)}
+      20%{transform:translateX(-8px) rotate(-10deg)}
+      40%{transform:translateX(8px) rotate(10deg)}
+      60%{transform:translateX(-6px) rotate(-6deg)}
+      80%{transform:translateX(6px) rotate(6deg)}
+    }
+    .shaking { animation: sadShake 0.6s ease-in-out; }
+
+    @keyframes suckIn {
+      0%{transform:scale(1) rotate(0deg);opacity:1}
+      100%{transform:scale(0) rotate(720deg);opacity:0}
+    }
+    .sucked { animation: suckIn 0.8s ease-in forwards; }
+
+    @keyframes starFloat {
+      0%,100%{transform:translateY(0) scale(1)}
+      50%{transform:translateY(-4px) scale(1.1)}
+    }
+    .star-float { animation: starFloat 1.5s ease-in-out infinite; display:inline-block; }
+
+    @keyframes blackholeSpin {
+      from{transform:rotate(0deg)}
+      to{transform:rotate(360deg)}
+    }
+    .bh-spin { animation: blackholeSpin 2s linear infinite; display:inline-block; }
+
+    @keyframes sparkBurst {
+      0%{opacity:1;transform:scale(0) rotate(0deg)}
+      100%{opacity:0;transform:scale(2.5) rotate(360deg)}
+    }
+    .spark {
+      position: absolute;
+      pointer-events: none;
+      z-index: 35;
+      font-size: 16px;
+      animation: sparkBurst 0.7s ease-out forwards;
+    }
+
+    .code-section {
+      padding: 6px 10px 10px;
+      background: #0a0a20;
+      border-radius: 14px 14px 0 0;
+      border-top: 2px solid #1a1a5e;
+    }
+    .cnt-badge { font-size: 11px; color: #666; text-align: right; margin-bottom: 3px; }
+    .drop-frame {
+      min-height: 60px;
+      max-height: 84px;
+      background: #0d0d25;
+      border: 2.5px dashed #333;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 7px;
+      margin-bottom: 8px;
+      overflow-y: auto;
+    }
+    .drop-frame.drag-over { border-color: #4fc3f7; background: #0d2a3e; }
+    .drop-frame.reject { border-color: #f44336; background: #2a0d0d; }
+
+    .chip {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+      transition: transform 0.15s, opacity 0.15s;
+      border-bottom: 3px solid rgba(0,0,0,0.4);
+      color: white;
+    }
+    .chip.active-step {
+      transform: scale(1.35);
+      border: 3px solid #FFD700;
+      border-bottom: 4px solid #b8860b;
+      box-shadow: 0 0 0 3px rgba(255,215,0,0.5);
+      z-index: 10;
+    }
+    .chip.done-step { opacity: 0.38; transform: scale(0.88); }
+    @keyframes chipOut {
+      0%{transform:scale(1) rotate(0deg);opacity:1}
+      100%{transform:scale(0) rotate(25deg);opacity:0}
+    }
+    .chip.removing { animation: chipOut 0.28s ease-in forwards; pointer-events: none; }
+    .chip-FORWARD { background: #1565C0; border-bottom-color: #0a3a7a; }
+    .chip-LEFT    { background: #F57C00; border-bottom-color: #7f3b00; }
+    .chip-RIGHT   { background: #6A1B9A; border-bottom-color: #3a0a5a; }
+
+    .cmd-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .cmd-src {
+      flex: 1;
+      height: 52px;
+      border: none;
+      border-radius: 14px;
+      font-size: 18px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      transition: transform 0.1s, box-shadow 0.1s;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .cmd-src span { font-size: 10px; opacity: 0.85; }
+    .cmd-FORWARD { background: #1565C0; box-shadow: 0 6px 0 #0a3a7a; }
+    .cmd-LEFT    { background: #F57C00; box-shadow: 0 6px 0 #7f3b00; }
+    .cmd-RIGHT   { background: #6A1B9A; box-shadow: 0 6px 0 #3a0a5a; }
+    .cmd-src:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.3) !important; }
+
+    .go-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #1565C0, #0d47a1);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #0a2a6a;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .go-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #0a2a6a; }
+
+    /* MODAL */
+    .modal-ov {
+      position: absolute;
+      top:0; left:0;
+      width:100%; height:100%;
+      background: rgba(0,0,20,0.85);
+      z-index: 500;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-ov.show { display: flex; }
+    .modal-card {
+      background: #0d0d2b;
+      border: 2px solid #2a2a7e;
+      padding: 28px 22px;
+      border-radius: 28px;
+      text-align: center;
+      width: 100%;
+      box-shadow: 0 0 40px rgba(79,195,247,0.2);
+    }
+    @keyframes popIn {
+      from{transform:scale(0.4);opacity:0}
+      to{transform:scale(1);opacity:1}
+    }
+    .modal-card { animation: popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+    .modal-btn {
+      width: 100%;
+      border: none;
+      padding: 14px;
+      border-radius: 24px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-green { background: #4CAF50; color: white; box-shadow: 0 5px 0 #2e7d32; }
+    .btn-orange { background: #FF9800; color: white; box-shadow: 0 5px 0 #e65100; }
+
+    /* EDITOR */
+    .edit-tray {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: #0d0d2b;
+      border-top: 4px solid #4fc3f7;
+      padding: 12px;
+      transform: translateY(100%);
+      transition: transform 0.3s;
+      z-index: 200;
+      border-radius: 18px 18px 0 0;
+    }
+    .edit-tray.open { transform: translateY(0); }
+    .tool-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
+    .tool-btn { width: 48px; height: 48px; border: 2px solid #333; border-radius: 12px; background: #1a1a3e; font-size: 22px; cursor: pointer; color: white; }
+    .tool-btn.sel { border-color: #4fc3f7; background: #0d2a3e; }
+    .save-btn { width: 100%; background: #4fc3f7; color: #000; border: none; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+    /* ŞİFRE */
+    .pw-ov {
+      position: absolute; top:0; left:0; width:100%; height:100%;
+      background: rgba(0,0,20,0.8); z-index: 600;
+      display: none; align-items: center; justify-content: center;
+    }
+    .pw-ov.show { display: flex; }
+    .pw-card { background: #0d0d2b; border: 2px solid #2a2a7e; padding: 24px 20px; border-radius: 22px; text-align: center; width: 240px; }
+    .pw-input { width: 100%; padding: 10px 12px; border: 2px solid #333; border-radius: 10px; font-size: 18px; text-align: center; letter-spacing: 4px; outline: none; margin-bottom: 8px; background: #1a1a3e; color: white; }
+    .pw-input:focus { border-color: #4fc3f7; }
+    .pw-err { color: #f44336; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: none; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
+    .pw-btns { display: flex; gap: 8px; }
+    .pw-ok { flex:1; background: #4fc3f7; color: #000; border: none; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #0288d1; }
+    .pw-cancel { flex:1; background: #1a1a3e; color: #aaa; border: none; padding: 10px; border-radius: 10px; font-weight: 700; cursor: pointer; }
+
+    /* Zorluk badge */
+    .diff-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+    .diff-easy   { background: #1b5e20; color: #69f0ae; }
+    .diff-medium { background: #e65100; color: #ffcc80; }
+    .diff-hard   { background: #4a148c; color: #ea80fc; }
+
+    /* Yön göstergesi */
+    .dir-indicator {
+      font-size: 11px;
+      color: #4fc3f7;
+      text-align: center;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- HARİTA EKRANI -->
+  <div id="sMap" class="scr on">
+    <div class="map-header">
+      <span style="font-size:19px;font-weight:700;color:#4fc3f7">🚀 Yıldız Avcısı</span>
+      <span id="scoreDisp" style="font-weight:700;color:#FFD700">⭐ 0</span>
+    </div>
+    <div class="diff-select">
+      <button class="diff-btn sel" id="dEasy"   onclick="selDiff('easy')">🟢 Kolay<br><small>1-20</small></button>
+      <button class="diff-btn"     id="dMedium" onclick="selDiff('medium')">🟠 Orta<br><small>21-40</small></button>
+      <button class="diff-btn"     id="dHard"   onclick="selDiff('hard')">🔴 Zor<br><small>41-60</small></button>
+    </div>
+    <div class="lvl-grid" id="lvlGrid"></div>
+  </div>
+
+  <!-- OYUN EKRANI -->
+  <div id="sPlay" class="scr">
+    <div class="play-header">
+      <button onclick="goMap()" style="border:none;background:none;font-size:21px;cursor:pointer;">🏠</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <b id="lvlLabel" style="color:#4fc3f7">Bölüm 1</b>
+        <span id="diffBadge" class="diff-badge diff-easy">Kolay</span>
+      </div>
+      <button onclick="toggleEdit()" style="border:none;background:none;font-size:21px;cursor:pointer;">⚙️</button>
+    </div>
+
+    <div class="board" id="board">
+      <div id="rocket" class="rocket">
+        <div id="rocketInner" class="rocket-inner">
+          <!-- SVG roket: varsayılan yukarı bakıyor -->
+          <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Gövde -->
+            <ellipse cx="18" cy="16" rx="7" ry="11" fill="#e0e0e0"/>
+            <!-- Burun -->
+            <path d="M18 3 L24 14 L12 14 Z" fill="#ef5350"/>
+            <!-- Sol kanat -->
+            <path d="M11 22 L6 30 L13 26 Z" fill="#42a5f5"/>
+            <!-- Sağ kanat -->
+            <path d="M25 22 L30 30 L23 26 Z" fill="#42a5f5"/>
+            <!-- Pencere -->
+            <circle cx="18" cy="16" r="3.5" fill="#4fc3f7" opacity="0.9"/>
+            <circle cx="18" cy="16" r="2" fill="#e3f2fd" opacity="0.7"/>
+            <!-- Alev -->
+            <ellipse cx="18" cy="28" rx="4" ry="5" fill="#FF9800" opacity="0.9"/>
+            <ellipse cx="18" cy="29" rx="2.5" ry="3.5" fill="#FFD700" opacity="0.85"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-section">
+      <div class="dir-indicator" id="dirIndicator">🚀 Yön: ⬆️ Yukarı</div>
+      <div class="cnt-badge"><span id="cntBadge">0</span> / 20 — tıkla = sil</div>
+      <div class="drop-frame" id="dropZone"></div>
+      <div class="cmd-row">
+        <button class="cmd-src cmd-LEFT"    onclick="addCmd('LEFT')">↩️<span>Sol Dön</span></button>
+        <button class="cmd-src cmd-FORWARD" onclick="addCmd('FORWARD')">🚀<span>İlerle</span></button>
+        <button class="cmd-src cmd-RIGHT"   onclick="addCmd('RIGHT')">↪️<span>Sağ Dön</span></button>
+      </div>
+      <button class="go-btn" onclick="runCode()">▶ BAŞLAT</button>
+    </div>
+
+    <!-- BAŞARI MODALI -->
+    <div id="winModal" class="modal-ov">
+      <div class="modal-card">
+        <div style="font-size:50px">🎉</div>
+        <h2 style="color:#4fc3f7;margin:8px 0 4px;font-size:22px">MÜKEMMEL!</h2>
+        <p style="color:#888;font-size:13px">Tüm yıldızlar toplandı!</p>
+        <div style="font-size:30px;color:#FFD700;margin:10px 0" id="winStars">⭐⭐⭐</div>
+        <button class="modal-btn btn-green" onclick="goNext()">BİR SONRAKİ BÖLÜM ➔</button>
+        <button class="modal-btn btn-orange" onclick="retryLvl()" style="margin-top:6px">🔄 TEKRAR OYNA</button>
+      </div>
+    </div>
+
+    <!-- HATA MODALI -->
+    <div id="failModal" class="modal-ov">
+      <div class="modal-card">
+        <div id="failIcon" style="font-size:50px">🔄</div>
+        <h2 id="failTitle" style="color:#FF9800;margin:8px 0 4px;font-size:20px">OLMADI!</h2>
+        <p id="failMsg" style="color:#888;font-size:13px;margin-bottom:4px">Tekrar dene!</p>
+        <button class="modal-btn btn-orange" onclick="retryLvl()">🔄 TEKRAR DENE</button>
+      </div>
+    </div>
+
+    <!-- EDITOR TRAY -->
+    <div class="edit-tray" id="editTray">
+      <div style="text-align:center;font-weight:700;margin-bottom:9px;color:#4fc3f7">🛠️ HARİTAYI DÜZENLE</div>
+      <div class="tool-row">
+        <button class="tool-btn sel" id="tB" onclick="selTool('B')" title="Başlangıç">🚀</button>
+        <button class="tool-btn" id="tS" onclick="selTool('S')" title="Yıldız">⭐</button>
+        <button class="tool-btn" id="tM" onclick="selTool('M')" title="Meteor">☄️</button>
+        <button class="tool-btn" id="tH" onclick="selTool('H')" title="Kara Delik">🌀</button>
+        <button class="tool-btn" id="tX" onclick="selTool('X')" title="Sil">❌</button>
+      </div>
+      <button class="save-btn" onclick="toggleEdit()">✅ KAYDET VE KAPAT</button>
+    </div>
+
+    <!-- ŞİFRE MODALI -->
+    <div id="pwOv" class="pw-ov">
+      <div class="pw-card">
+        <div style="font-size:30px;margin-bottom:6px">🔐</div>
+        <h3 style="color:#4fc3f7;margin-bottom:6px;font-size:16px">Editör Şifresi</h3>
+        <p style="color:#888;font-size:12px;margin-bottom:14px">Bu alan yalnızca öğretmenler içindir</p>
+        <input id="pwInput" class="pw-input" type="password" placeholder="••••"
+          onkeydown="if(event.key==='Enter')checkPw()">
+        <div id="pwErr" class="pw-err">❌ Yanlış şifre!</div>
+        <div class="pw-btns">
+          <button class="pw-cancel" onclick="closePw()">İptal</button>
+          <button class="pw-ok" onclick="checkPw()">Giriş ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Yönler: 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
+var DIR_NAMES = ['UP','RIGHT','DOWN','LEFT'];
+var DIR_LABELS = ['⬆️ Yukarı','➡️ Sağa','⬇️ Aşağı','⬅️ Sola'];
+var DIR_ROTATIONS = [0, 90, 180, -90]; // CSS derece
+var DIR_DELTA = [{r:-1,c:0},{r:0,c:1},{r:1,c:0},{r:0,c:-1}];
+
+var CHIP_LABELS = { FORWARD:'🚀', LEFT:'↩️', RIGHT:'↪️' };
+var CHIP_COLORS = { FORWARD:'chip-FORWARD', LEFT:'chip-LEFT', RIGHT:'chip-RIGHT' };
+
+var G = {
+  unlocked: 1, done: [], lvls: [],
+  cur: 0, tool: 'B', running: false,
+  pos: {r:0,c:0},
+  facing: 0, // 0=UP
+  cmds: [],
+  activeStep: -1,
+  editorUnlocked: false,
+  selDiff: 'easy'
+};
+
+/* ── SES ── */
+var _ctx = null;
+function getCtx() {
+  if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ctx.state === 'suspended') _ctx.resume();
+  return _ctx;
+}
+function playTone(freq, type, dur, vol, delay) {
+  try {
+    var ctx = getCtx();
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, ctx.currentTime + (delay||0));
+    g.gain.setValueAtTime(vol||0.2, ctx.currentTime + (delay||0));
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (delay||0) + dur);
+    o.start(ctx.currentTime + (delay||0));
+    o.stop(ctx.currentTime + (delay||0) + dur);
+  } catch(e) {}
+}
+function playSound(type) {
+  try {
+    if (type === 'thrust') {
+      playTone(80,'sawtooth',0.15,0.12);
+      playTone(120,'sawtooth',0.1,0.08,0.05);
+    } else if (type === 'collect') {
+      playTone(880,'sine',0.08,0.18);
+      playTone(1100,'sine',0.1,0.18,0.08);
+      playTone(1320,'triangle',0.15,0.15,0.16);
+    } else if (type === 'win') {
+      [523,659,784,1047,1319].forEach(function(f,i){ playTone(f,'triangle',0.3,0.2,i*0.12); });
+    } else if (type === 'meteor') {
+      playTone(200,'sawtooth',0.1,0.25);
+      playTone(100,'sawtooth',0.18,0.2,0.08);
+      playTone(60,'sawtooth',0.25,0.15,0.18);
+    } else if (type === 'blackhole') {
+      playTone(150,'sine',0.3,0.2);
+      playTone(100,'sine',0.4,0.18,0.1);
+      playTone(60,'sine',0.5,0.15,0.25);
+      playTone(40,'sine',0.6,0.1,0.45);
+    } else if (type === 'turn') {
+      playTone(440,'sine',0.08,0.1);
+    } else if (type === 'sad') {
+      playTone(400,'sine',0.15,0.18);
+      playTone(300,'sine',0.2,0.15,0.15);
+      playTone(220,'sine',0.25,0.12,0.32);
+    }
+  } catch(e) {}
+}
+
+/* ── BÖLÜMLER ── */
+function mkLvls() {
+  // Kolay (0-19): Sadece yıldız, kara delik yok
+  var easyMaps = [
+    {s:{r:4,c:0},f:0,st:[{r:3,c:0}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:4,c:1}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:2,c:0}],me:[],bh:[]},
+    {s:{r:4,c:0},f:1,st:[{r:4,c:1}],me:[],bh:[]},
+    {s:{r:4,c:4},f:3,st:[{r:4,c:3}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:2,c:0}],me:[],bh:[]},
+    {s:{r:0,c:0},f:2,st:[{r:2,c:0}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0}],me:[],bh:[]},
+    {s:{r:4,c:0},f:1,st:[{r:4,c:3}],me:[],bh:[]},
+    {s:{r:0,c:0},f:1,st:[{r:0,c:4}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:2,c:0}],me:[],bh:[]},
+    {s:{r:4,c:0},f:1,st:[{r:4,c:2},{r:4,c:4}],me:[],bh:[]},
+    {s:{r:2,c:0},f:1,st:[{r:2,c:4}],me:[],bh:[]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:2}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0}],me:[],bh:[]},
+    {s:{r:0,c:4},f:3,st:[{r:0,c:0}],me:[],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[],bh:[]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[],bh:[]},
+    {s:{r:4,c:0},f:1,st:[{r:4,c:4},{r:0,c:4}],me:[],bh:[]},
+    {s:{r:0,c:0},f:2,st:[{r:4,c:0},{r:4,c:4}],me:[],bh:[]}
+  ];
+  // Orta (20-39): Meteor engelleri var
+  var medMaps = [
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0}],me:[{r:2,c:0}],bh:[]},
+    {s:{r:4,c:0},f:1,st:[{r:4,c:4}],me:[{r:4,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:2,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:1,c:2},{r:3,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[{r:2,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:2,c:1},{r:2,c:2},{r:2,c:3}],bh:[]},
+    {s:{r:0,c:0},f:2,st:[{r:4,c:4}],me:[{r:2,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4},{r:2,c:2}],me:[{r:1,c:1},{r:3,c:3}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:1,c:2},{r:2,c:2},{r:3,c:2}],bh:[]},
+    {s:{r:0,c:4},f:3,st:[{r:4,c:0}],me:[{r:2,c:2},{r:1,c:1}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[{r:2,c:1},{r:2,c:3}],bh:[]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[{r:2,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4},{r:4,c:4},{r:0,c:0}],me:[{r:2,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:1,c:1},{r:2,c:2},{r:3,c:3}],bh:[]},
+    {s:{r:2,c:0},f:1,st:[{r:0,c:4},{r:4,c:4}],me:[{r:1,c:2},{r:3,c:2}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:2},{r:0,c:4}],me:[{r:2,c:0},{r:2,c:1},{r:2,c:3}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4},{r:2,c:4}],me:[{r:1,c:2},{r:3,c:2},{r:2,c:1}],bh:[]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:2},{r:0,c:4}],me:[{r:2,c:1},{r:2,c:3}],bh:[]},
+    {s:{r:0,c:0},f:1,st:[{r:0,c:4},{r:4,c:4}],me:[{r:0,c:2},{r:2,c:4}],bh:[]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:0},{r:0,c:2},{r:0,c:4}],me:[{r:2,c:1},{r:2,c:3},{r:3,c:2}],bh:[]}
+  ];
+  // Zor (40-59): Hem meteor hem kara delik
+  var hardMaps = [
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:2,c:2}],bh:[{r:1,c:1}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:2,c:1}],bh:[{r:2,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[{r:2,c:2}],bh:[{r:1,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:1,c:2},{r:3,c:2}],bh:[{r:2,c:2}]},
+    {s:{r:0,c:0},f:2,st:[{r:4,c:4}],me:[{r:2,c:2}],bh:[{r:3,c:1}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4},{r:2,c:2}],me:[{r:1,c:1}],bh:[{r:3,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:1,c:2},{r:2,c:2}],bh:[{r:3,c:2}]},
+    {s:{r:0,c:4},f:3,st:[{r:4,c:0}],me:[{r:2,c:2}],bh:[{r:1,c:1},{r:3,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[{r:2,c:1},{r:2,c:3}],bh:[{r:1,c:2}]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:0},{r:0,c:4}],me:[{r:2,c:2}],bh:[{r:1,c:1},{r:1,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4},{r:4,c:4},{r:0,c:0}],me:[{r:2,c:2}],bh:[{r:1,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4}],me:[{r:1,c:1},{r:2,c:2},{r:3,c:3}],bh:[{r:1,c:3}]},
+    {s:{r:2,c:0},f:1,st:[{r:0,c:4},{r:4,c:4}],me:[{r:1,c:2},{r:3,c:2}],bh:[{r:2,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:2},{r:0,c:4}],me:[{r:2,c:0},{r:2,c:1}],bh:[{r:2,c:3}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:4},{r:2,c:4}],me:[{r:1,c:2},{r:3,c:2}],bh:[{r:2,c:1}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:2},{r:0,c:4}],me:[{r:2,c:1},{r:2,c:3}],bh:[{r:1,c:2}]},
+    {s:{r:0,c:0},f:1,st:[{r:0,c:4},{r:4,c:4}],me:[{r:0,c:2},{r:2,c:4}],bh:[{r:2,c:2}]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:0},{r:0,c:2},{r:0,c:4}],me:[{r:2,c:1},{r:2,c:3}],bh:[{r:1,c:0},{r:1,c:4}]},
+    {s:{r:4,c:0},f:0,st:[{r:0,c:0},{r:0,c:4},{r:2,c:2}],me:[{r:1,c:2},{r:3,c:2}],bh:[{r:2,c:1},{r:2,c:3}]},
+    {s:{r:4,c:2},f:0,st:[{r:0,c:0},{r:0,c:2},{r:0,c:4},{r:2,c:0},{r:2,c:4}],me:[{r:1,c:1},{r:1,c:3}],bh:[{r:3,c:1},{r:3,c:3}]}
+  ];
+
+  var allMaps = easyMaps.concat(medMaps).concat(hardMaps);
+  for (var i = 0; i < 60; i++) {
+    var m = allMaps[i];
+    G.lvls.push({
+      start: {r:m.s.r, c:m.s.c},
+      startFacing: m.f,
+      stars: m.st.map(function(s){ return {r:s.r,c:s.c,collected:false}; }),
+      meteors: m.me.map(function(x){ return {r:x.r,c:x.c}; }),
+      blackholes: m.bh.map(function(x){ return {r:x.r,c:x.c}; })
+    });
+  }
+}
+
+/* ── ZORLUK SEÇİMİ ── */
+function selDiff(d) {
+  G.selDiff = d;
+  ['easy','medium','hard'].forEach(function(x){
+    document.getElementById('d'+x.charAt(0).toUpperCase()+x.slice(1)).classList.remove('sel');
+  });
+  document.getElementById('d'+d.charAt(0).toUpperCase()+d.slice(1)).classList.add('sel');
+  drawMap();
+}
+
+/* ── HARİTA ── */
+function goMap() {
+  document.getElementById('sMap').classList.add('on');
+  document.getElementById('sPlay').classList.remove('on');
+  drawMap();
+}
+function drawMap() {
+  var g = document.getElementById('lvlGrid');
+  g.innerHTML = '';
+  var start = G.selDiff==='easy'?0 : G.selDiff==='medium'?20 : 40;
+  var end = start + 20;
+  for (var i = start; i < end; i++) {
+    (function(idx){
+      var d = document.createElement('div');
+      var isOpen = (idx+1) <= G.unlocked;
+      var isDone = G.done.indexOf(idx+1) >= 0;
+      d.className = 'lc'+(isOpen?' open':'')+(isDone?' done':'');
+      d.innerText = idx+1;
+      if (isOpen) d.onclick = function(){ startLvl(idx); };
+      g.appendChild(d);
+    })(i);
+  }
+  document.getElementById('scoreDisp').innerText = '⭐ '+G.done.length;
+}
+
+/* ── BÖLÜM BAŞLAT ── */
+function startLvl(idx) {
+  G.cur = idx;
+  var l = G.lvls[idx];
+  l.stars.forEach(function(s){ s.collected=false; });
+  G.pos = {r:l.start.r, c:l.start.c};
+  G.facing = l.startFacing;
+  G.cmds = [];
+  G.running = false;
+  G.activeStep = -1;
+
+  var diff = idx < 20 ? 'easy' : idx < 40 ? 'medium' : 'hard';
+  var diffLabels = {easy:'Kolay', medium:'Orta', hard:'Zor'};
+  var diffClasses = {easy:'diff-easy', medium:'diff-medium', hard:'diff-hard'};
+  document.getElementById('lvlLabel').innerText = 'Bölüm '+(idx+1);
+  var badge = document.getElementById('diffBadge');
+  badge.innerText = diffLabels[diff];
+  badge.className = 'diff-badge '+diffClasses[diff];
+
+  document.getElementById('dropZone').innerHTML = '';
+  document.getElementById('cntBadge').innerText = '0';
+  document.getElementById('winModal').classList.remove('show');
+  document.getElementById('failModal').classList.remove('show');
+  document.getElementById('editTray').classList.remove('open');
+  document.getElementById('pwOv').classList.remove('show');
+  document.getElementById('sMap').classList.remove('on');
+  document.getElementById('sPlay').classList.add('on');
+  updateDirIndicator();
+  drawBoard();
+}
+
+/* ── YÖN GÖSTERGESİ ── */
+function updateDirIndicator() {
+  document.getElementById('dirIndicator').innerText = '🚀 Yön: ' + DIR_LABELS[G.facing];
+}
+
+/* ── TAHTA ── */
+function drawBoard() {
+  var board = document.getElementById('board');
+  board.querySelectorAll('.sq').forEach(function(s){ s.remove(); });
+  var l = G.lvls[G.cur];
+  for (var i = 0; i < 25; i++) {
+    (function(r,c){
+      var sq = document.createElement('div');
+      sq.className = 'sq '+((r+c)%2===0?'sq-space1':'sq-space2');
+      sq.onclick = function(){ onSqClick(r,c); };
+
+      if (l.stars.some(function(s){ return s.r===r&&s.c===c&&!s.collected; })) {
+        var span = document.createElement('span');
+        span.className = 'star-float';
+        span.innerText = '⭐';
+        sq.appendChild(span);
+      }
+      if (l.meteors.some(function(m){ return m.r===r&&m.c===c; })) {
+        sq.innerText='☄️';
+        sq.style.background='#1a0a00';
+      }
+      if (l.blackholes.some(function(b){ return b.r===r&&b.c===c; })) {
+        var span = document.createElement('span');
+        span.className = 'bh-spin';
+        span.innerText = '🌀';
+        sq.appendChild(span);
+        sq.style.background='#0a0020';
+      }
+      board.appendChild(sq);
+    })(Math.floor(i/5), i%5);
+  }
+  moveRocket();
+}
+
+function moveRocket() {
+  var r = document.getElementById('rocket');
+  var ri = document.getElementById('rocketInner');
+  r.style.top  = (G.pos.r*57+4)+'px';
+  r.style.left = (G.pos.c*57+4)+'px';
+  var rot = 'rotate('+DIR_ROTATIONS[G.facing]+'deg)';
+  ri.style.transform = rot;
+  // CSS değişkeni olarak da sakla — thrustAnim bunu kullanır
+  ri.style.setProperty('--rocket-rot', rot);
+}
+
+function spawnSpark(r,c) {
+  var board = document.getElementById('board');
+  ['✨','🌟','💫','⚡','🌠'].forEach(function(em,i){
+    var el = document.createElement('div');
+    el.className='spark';
+    el.innerText=em;
+    el.style.top  = (r*57+4+Math.random()*20-10)+'px';
+    el.style.left = (c*57+4+Math.random()*20-10)+'px';
+    el.style.animationDelay=(i*0.07)+'s';
+    board.appendChild(el);
+    setTimeout(function(){ el.remove(); },800);
+  });
+}
+
+/* ── EDİTÖR ── */
+function toggleEdit() {
+  var tray = document.getElementById('editTray');
+  if (tray.classList.contains('open')){ tray.classList.remove('open'); return; }
+  if (G.editorUnlocked){ tray.classList.add('open'); return; }
+  document.getElementById('pwOv').classList.add('show');
+  document.getElementById('pwInput').value='';
+  document.getElementById('pwErr').style.display='none';
+  setTimeout(function(){ document.getElementById('pwInput').focus(); },100);
+}
+function checkPw() {
+  if (document.getElementById('pwInput').value==='sifigu') {
+    G.editorUnlocked=true;
+    document.getElementById('pwOv').classList.remove('show');
+    document.getElementById('editTray').classList.add('open');
+  } else {
+    var err=document.getElementById('pwErr');
+    err.style.display='block';
+    document.getElementById('pwInput').value='';
+    err.style.animation='none'; void err.offsetWidth; err.style.animation='shake 0.4s ease';
+  }
+}
+function closePw(){ document.getElementById('pwOv').classList.remove('show'); }
+function selTool(t) {
+  G.tool=t;
+  ['B','S','M','H','X'].forEach(function(x){ document.getElementById('t'+x).classList.remove('sel'); });
+  document.getElementById('t'+t).classList.add('sel');
+}
+function onSqClick(r,c) {
+  if (!document.getElementById('editTray').classList.contains('open')) return;
+  var l=G.lvls[G.cur];
+  if (G.tool==='B'){ l.start={r:r,c:c}; G.pos={r:r,c:c}; }
+  else if (G.tool==='S'){ if(!l.stars.some(function(s){return s.r===r&&s.c===c;})) l.stars.push({r:r,c:c,collected:false}); }
+  else if (G.tool==='M'){ if(!l.meteors.some(function(m){return m.r===r&&m.c===c;})) l.meteors.push({r:r,c:c}); }
+  else if (G.tool==='H'){ if(!l.blackholes.some(function(b){return b.r===r&&b.c===c;})) l.blackholes.push({r:r,c:c}); }
+  else if (G.tool==='X'){
+    l.stars=l.stars.filter(function(s){return!(s.r===r&&s.c===c);});
+    l.meteors=l.meteors.filter(function(m){return!(m.r===r&&m.c===c);});
+    l.blackholes=l.blackholes.filter(function(b){return!(b.r===r&&b.c===c);});
+  }
+  drawBoard();
+}
+
+/* ── KOMUTLAR ── */
+function addCmd(cmd) {
+  if (G.running || G.cmds.length >= 20) return;
+  G.cmds.push(cmd);
+  renderChips(-1);
+}
+function renderChips(activeIdx) {
+  var z = document.getElementById('dropZone');
+  z.innerHTML = '';
+  G.cmds.forEach(function(cmd, idx) {
+    var chip = document.createElement('div');
+    chip.className = 'chip ' + CHIP_COLORS[cmd];
+    if (idx === activeIdx) chip.classList.add('active-step');
+    else if (activeIdx >= 0 && idx < activeIdx) chip.classList.add('done-step');
+    chip.innerText = CHIP_LABELS[cmd];
+    chip.title = cmd === 'FORWARD' ? 'İlerle' : cmd === 'LEFT' ? 'Sol Dön' : 'Sağ Dön';
+    chip.onclick = (function(i){ return function(){ if(!G.running) removeChip(i); }; })(idx);
+    z.appendChild(chip);
+  });
+  document.getElementById('cntBadge').innerText = G.cmds.length;
+  if (activeIdx >= 0) {
+    var chips = z.querySelectorAll('.chip');
+    if (chips[activeIdx]) chips[activeIdx].scrollIntoView({block:'nearest',inline:'center'});
+  }
+}
+function removeChip(idx) {
+  var z = document.getElementById('dropZone');
+  var chips = Array.from(z.querySelectorAll('.chip'));
+  if (chips[idx]) {
+    chips[idx].classList.add('removing');
+    setTimeout(function(){ G.cmds.splice(idx,1); renderChips(-1); }, 260);
+  }
+}
+
+/* ── HATA MODALI ── */
+function showFail(icon, title, msg) {
+  var rkt = document.getElementById('rocket');
+  rkt.classList.add('shaking');
+  setTimeout(function(){ rkt.classList.remove('shaking'); }, 700);
+  document.getElementById('failIcon').innerText = icon;
+  document.getElementById('failTitle').innerText = title;
+  document.getElementById('failMsg').innerText = msg;
+  document.getElementById('failModal').classList.add('show');
+}
+function retryLvl() {
+  document.getElementById('failModal').classList.remove('show');
+  startLvl(G.cur);
+}
+
+/* ── KOD ÇALIŞTIR ── */
+async function runCode() {
+  if (G.running || !G.cmds.length) return;
+  try { getCtx(); } catch(e){}
+  G.running = true;
+  var l = G.lvls[G.cur];
+  var rkt = document.getElementById('rocket');
+  var ri = document.getElementById('rocketInner');
+  // Komutları kopyala — döngü sırasında G.cmds değişmesin
+  var cmds = G.cmds.slice();
+
+  for (var i = 0; i < cmds.length; i++) {
+    if (!G.running) break; // erken çıkış
+    renderChips(i);
+    var cmd = cmds[i];
+
+    if (cmd === 'LEFT') {
+      G.facing = (G.facing + 3) % 4;
+      playSound('turn');
+      var rotL = 'rotate(' + DIR_ROTATIONS[G.facing] + 'deg)';
+      ri.style.transform = rotL;
+      ri.style.setProperty('--rocket-rot', rotL);
+      updateDirIndicator();
+      await new Promise(function(res){ setTimeout(res, 400); });
+
+    } else if (cmd === 'RIGHT') {
+      G.facing = (G.facing + 1) % 4;
+      playSound('turn');
+      var rotR = 'rotate(' + DIR_ROTATIONS[G.facing] + 'deg)';
+      ri.style.transform = rotR;
+      ri.style.setProperty('--rocket-rot', rotR);
+      updateDirIndicator();
+      await new Promise(function(res){ setTimeout(res, 400); });
+
+    } else if (cmd === 'FORWARD') {
+      var curFacing = G.facing;
+      var delta = DIR_DELTA[curFacing];
+      var nr = G.pos.r + delta.r;
+      var nc = G.pos.c + delta.c;
+
+      // Sınır kontrolü
+      if (nr < 0 || nr > 4 || nc < 0 || nc > 4) {
+        playSound('sad');
+        G.running = false;
+        renderChips(-1);
+        setTimeout(function(){ showFail('🚀💨', 'SINIR DIŞI!', 'Uzay aracı haritadan çıktı!'); }, 200);
+        return;
+      }
+
+      // Meteor kontrolü
+      if (l.meteors.some(function(m){ return m.r===nr&&m.c===nc; })) {
+        playSound('meteor');
+        G.running = false;
+        renderChips(-1);
+        setTimeout(function(){ showFail('💥', 'METEOR ÇARPTI!', 'Meteordan kaçın, başka yol dene!'); }, 200);
+        return;
+      }
+
+      // Kara delik kontrolü
+      if (l.blackholes.some(function(b){ return b.r===nr&&b.c===nc; })) {
+        G.pos.r = nr; G.pos.c = nc;
+        // Yönü koru — kara deliğe girerken de aynı yönde bakmalı
+        moveRocket();
+        playSound('blackhole');
+        rkt.classList.add('sucked');
+        G.running = false;
+        renderChips(-1);
+        await new Promise(function(res){ setTimeout(res, 900); });
+        rkt.classList.remove('sucked');
+        setTimeout(function(){ showFail('🌀', 'KARA DELİK!', 'Kara deliğe çekildin! Kaçınmayı dene!'); }, 100);
+        return;
+      }
+
+      // Hareket et — yön değişmez, sadece konum değişir
+      G.pos.r = nr; G.pos.c = nc;
+      playSound('thrust');
+      rkt.classList.add('thrusting');
+      // moveRocket: konumu güncelle, yönü KORUR (G.facing değişmedi)
+      moveRocket();
+
+      // Yıldız toplama
+      var si = -1;
+      for (var j = 0; j < l.stars.length; j++) {
+        if (!l.stars[j].collected && l.stars[j].r===nr && l.stars[j].c===nc){ si=j; break; }
+      }
+      if (si >= 0) {
+        l.stars[si].collected = true;
+        playSound('collect');
+        spawnSpark(nr, nc);
+        drawBoard(); // drawBoard → moveRocket çağırır, G.facing korunur
+      }
+
+      await new Promise(function(res){ setTimeout(res, 550); });
+      rkt.classList.remove('thrusting');
+    }
+  }
+
+  renderChips(-1);
+
+  if (l.stars.every(function(s){ return s.collected; })) {
+    if (G.done.indexOf(G.cur+1) < 0) G.done.push(G.cur+1);
+    if (G.unlocked === (G.cur+1)) G.unlocked++;
+    playSound('win');
+    // Yıldız sayısına göre puan
+    var cmdCount = G.cmds.length;
+    var starHtml = cmdCount <= 8 ? '⭐⭐⭐' : cmdCount <= 14 ? '⭐⭐' : '⭐';
+    document.getElementById('winStars').innerHTML = starHtml;
+    document.getElementById('winModal').classList.add('show');
+  } else {
+    playSound('sad');
+    showFail('🔄', 'OLMADI!', 'Bazı yıldızlar hâlâ orada duruyor!');
+  }
+  G.running = false;
+}
+
+function goNext() {
+  document.getElementById('winModal').classList.remove('show');
+  if (G.cur < 59) startLvl(G.cur+1); else goMap();
+}
+
+mkLvls();
+drawMap();
+</script>
+</body>
+</html>
